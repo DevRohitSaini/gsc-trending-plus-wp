@@ -1,32 +1,42 @@
-=== GSC Trending Plus ===
-Contributors: rohit-saini
-Tags: search console, analytics, seo, google api, trending posts
-Requires at least: 5.8
-Tested up to: 6.7
-Stable tag: 1.2
-License: GPLv2 or later
-License URI: https://www.gnu.org/licenses/gpl-2.0.html
+## GSC Trending Plus
 
-Display your most visited and trending posts based on Google Search Console data. Includes a shortcode and automatic setup wizard.
+A small WordPress plugin that displays your most visited and trending posts using Google Search Console data. This repository contains the plugin source used to integrate with GSC and a lightweight frontend style.
 
-== Description ==
+Key features
+- Show trending posts based on Search Console impressions and clicks
+- Shortcode: [gsc_trending_posts]
+- Admin settings page for configuring the Search Console connection
+- Uses service account key authentication for server-to-server access
 
-GSC Trending Plus helps WordPress site owners show which pages are performing best in Google Search — using real Search Console data.
+Requirements
+- WordPress 6.8.3 or later
+- PHP 7.4+ recommended
 
-**Features:**
-* Show top trending posts from Google Search Console.
-* Shortcode: [gsc_trending_posts]
-* Built-in admin panel for setup.
-* Secure authentication via service account key.
-* Tooltip metrics for CTR (Click-Through Rate) and Position.
-* Works with caching and page builders.
+Installation
 
-== Installation ==
+1. Copy the repository files into `/wp-content/plugins/gsc-trending-plus/` (or upload the ZIP via Plugins → Add New → Upload Plugin).
+2. Activate the plugin in the WordPress admin.
+3. Go to Settings → GSC Trending to configure your Google Service Account credentials and site property.
+4. Place the shortcode `[gsc_trending_posts]` in a post, page, or widget to render the trending posts list.
 
-1. Upload the plugin files to `/wp-content/plugins/gsc-trending-plus/` or install via WordPress Admin.
-2. Activate the plugin.
-3. Go to Settings → GSC Trending.
-4. Follow the setup guide to connect with Search Console.
-5. Add the shortcode [gsc_trending_posts] anywhere in your content.
+Files in this repository
+- `wp-gsc-trending.php` — main plugin file / entry point
+- `assets/style.css` — basic stylesheet used by the frontend output
+
+Usage
+
+- Shortcode: `[gsc_trending_posts]`
+	- Optional attributes may be supported in the plugin (check the settings or source for available options).
+- The plugin retrieves Search Console data server-side and renders a list of posts with metrics like clicks, impressions, CTR, and average position.
+
+Development notes
+
+- This repository is intentionally small. If you add features, please keep changes documented in the changelog below.
+- When testing locally, ensure you do not commit private service account keys to the repository. Use environment variables or a private config outside the repo.
+
+
+Support / Contact
+
+For issues, please open an issue in the repository. For quick questions, contact the author: rohit-saini (see the repo profile).
 
 
