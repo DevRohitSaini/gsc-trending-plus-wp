@@ -1,0 +1,85 @@
+/* GSC Trending Plus Frontend Styles */
+.gsc-trending {
+  padding: 15px;
+  border: 1px solid #e1e1e1;
+  border-radius: 10px;
+  background: #fafafa;
+  font-family: 'Segoe UI', Roboto, sans-serif;
+}
+
+.gsc-trending ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.gsc-trending li {
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #ddd;
+}
+
+.gsc-trending li:last-child {
+  border-bottom: none;
+}
+
+.gsc-trending a {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: #0073aa;
+  text-decoration: none;
+}
+
+.gsc-trending a:hover {
+  text-decoration: underline;
+  color: #005177;
+}
+
+.gsc-meta {
+  font-size: 0.9rem;
+  color: #555;
+  margin-top: 3px;
+}
+
+/* Tooltip enhancement for GSC metrics */
+.gsc-meta span {
+  position: relative;
+  cursor: help;
+  border-bottom: 1px dotted #888;
+}
+.gsc-meta span:hover::after {
+  opacity: 1;
+  transition: opacity 0.2s ease-in-out;
+}
+.gsc-meta span::after {
+  opacity: 0;
+}
+
+.gsc-meta span:hover::after {
+  content: attr(title);
+  position: absolute;
+  bottom: 130%;
+  left: 0;
+  background: #333;
+  color: #fff;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  line-height: 1.2;
+  width: max-content;
+  max-width: 250px;
+  white-space: normal;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  z-index: 999;
+}
+
+.gsc-meta span:hover::before {
+  content: '';
+  position: absolute;
+  bottom: 115%;
+  left: 10px;
+  border-width: 6px;
+  border-style: solid;
+  border-color: #333 transparent transparent transparent;
+}
+
