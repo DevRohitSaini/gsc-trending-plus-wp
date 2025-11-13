@@ -29,11 +29,6 @@ add_filter('plugin_action_links_' . plugin_basename(__FILE__), function($links) 
     return $links;
 });
 
-
-// --- Register settings page
-add_action('admin_menu', function(){
-    add_options_page('GSC Trending', 'GSC Trending', 'manage_options', 'gsc-trending', 'gsc_settings_page');
-});
 add_action('admin_init', function(){
     register_setting('gsc_trending_options', 'gsc_trending_options', 'gsc_options_sanitize');
 });
@@ -41,77 +36,178 @@ add_action('admin_init', function(){
 function gsc_options_sanitize($input) {
     $defaults = gsc_default_options();
     $out = array();
-    $out['client_path'] = sanitize_text_field($input['client_path'] ?: $defaults['client_path']);
-    $out['key_path']    = sanitize_text_field($input['key_path'] ?: $defaults['key_path']);
+
+    // Normalize and prepend WP_CONTENT_DIR if missing
+    $out['client_path'] = gsc_normalize_path($input['client_path'], '/google-api-php-client/vendor/autoload.php');
+    $out['key_path']    = gsc_normalize_path($input['key_path'], '/uploads/gsc-key.json');
+
     $out['site_url']    = esc_url_raw($input['site_url'] ?: $defaults['site_url']);
     $out['cache']       = intval($input['cache'] ?: $defaults['cache']);
     $out['days']        = intval($input['days'] ?: $defaults['days']);
     $out['limit']       = intval($input['limit'] ?: $defaults['limit']);
     $out['metric']      = in_array($input['metric'], array('clicks','impressions')) ? $input['metric'] : $defaults['metric'];
+
     return $out;
 }
 
-function gsc_settings_page(){
+// Helper: add WP_CONTENT_DIR if missing
+function gsc_normalize_path($path, $default) {
+    $path = trim(sanitize_text_field($path));
+    if (empty($path)) {
+        return WP_CONTENT_DIR . $default;
+    }
+    // If user entered only relative path (starts with /wp-content)
+    if (strpos($path, WP_CONTENT_DIR) === false) {
+        // Strip any leading /wp-content if added
+        $path = preg_replace('#^/wp-content#', '', $path);
+        $path = WP_CONTENT_DIR . $path;
+    }
+    return $path;
+}
+
+
+// --- Register settings page with tabs
+add_action('admin_menu', function(){
+    add_options_page(
+        'GSC Trending Plus',
+        'GSC Trending Plus',
+        'manage_options',
+        'gsc-trending',
+        'gsc_trending_admin_page'
+    );
+});
+
+function gsc_trending_admin_page() {
     if (!current_user_can('manage_options')) return;
-    $opts = get_option('gsc_trending_options', gsc_default_options());
+
+    $active_tab = isset($_GET['tab']) ? sanitize_text_field($_GET['tab']) : 'settings';
     ?>
     <div class="wrap">
-    <h1>GSC Trending Settings</h1>
-    <form method="post" action="options.php">
-    <?php settings_fields('gsc_trending_options'); ?>
-    <table class="form-table">
-    <tr><th>Google API Client autoload path</th>
-        <td><input style="width:60%" type="text" name="gsc_trending_options[client_path]" value="<?php echo esc_attr($opts['client_path']); ?>" />
-        <p class="description">Path to vendor/autoload.php from google-api-php-client (e.g. <?php echo esc_html(WP_CONTENT_DIR . '/google-api-php-client/vendor/autoload.php'); ?>)</p></td></tr>
-    <tr><th>Service account key JSON path</th>
-        <td><input style="width:60%" type="text" name="gsc_trending_options[key_path]" value="<?php echo esc_attr($opts['key_path']); ?>" />
-        <p class="description">Full filesystem path to the downloaded JSON key (recommended: <?php echo esc_html(WP_CONTENT_DIR . '/uploads/gsc-key.json'); ?>)</p></td></tr>
-    <tr><th>Search Console site URL</th>
-        <td><input style="width:60%" type="text" name="gsc_trending_options[site_url]" value="<?php echo esc_attr($opts['site_url']); ?>" />
-        <p class="description">Must match the property in Search Console, include trailing slash (e.g. <?php echo esc_html($opts['site_url']); ?>)</p></td></tr>
-    <tr><th>Cache (seconds)</th>
-        <td><input type="number" name="gsc_trending_options[cache]" value="<?php echo esc_attr($opts['cache']); ?>" /></td></tr>
-    <tr><th>Default days</th>
-        <td><input type="number" name="gsc_trending_options[days]" value="<?php echo esc_attr($opts['days']); ?>" /></td></tr>
-    <tr><th>Default limit</th>
-        <td><input type="number" name="gsc_trending_options[limit]" value="<?php echo esc_attr($opts['limit']); ?>" /></td></tr>
-    <tr><th>Default metric</th>
-        <td>
-            <select name="gsc_trending_options[metric]">
-                <option value="clicks" <?php selected($opts['metric'],'clicks'); ?>>Clicks</option>
-                <option value="impressions" <?php selected($opts['metric'],'impressions'); ?>>Impressions</option>
-            </select>
-        </td></tr>
-    </table>
-    <?php submit_button(); ?>
-    </form>
-	   
-	<h2>How to Use GSC Trending Plus</h2>
-<ol style="line-height:1.7; font-size:15px;">
-  <li><strong>Enable the Search Console API</strong> — Visit 
-    <a href="https://console.cloud.google.com/apis/library/searchconsole.googleapis.com" target="_blank">Search Console API</a> 
-    and click <em>Enable</em>.
-  </li>
-  <li><strong>Create a Service Account</strong> in 
-    <a href="https://console.cloud.google.com/iam-admin/serviceaccounts" target="_blank">Google Cloud Console</a>.
-  </li>
-  <li><strong>Grant Access</strong> — Add your service account email to 
-    <a href="https://search.google.com/search-console" target="_blank">Search Console → Settings → Users & permissions</a> 
-    with <em>Full</em> access.
-  </li>
-  <li><strong>Install PHP Google API Client</strong> — install manually via Composer:
-    <code>composer require google/apiclient:^2.15</code>
-  </li>
-  <li><strong>Upload Your Service Account Key</strong> — Upload the JSON key to 
-    <code>wp-content/uploads/gsc-key.json</code> and set its path above.
-  </li>
-  <li><strong>Use the Shortcode</strong> — Add <code>[gsc_trending_posts limit="6" days="14" metric="clicks"]</code> to any post or page.
-  </li>
-</ol>
-
+        <h1 class="wp-heading-inline">GSC Trending Plus</h1>
+        <hr class="wp-header-end">
+        <h2 class="nav-tab-wrapper">
+            <a href="?page=gsc-trending&tab=settings" class="nav-tab <?php echo $active_tab === 'settings' ? 'nav-tab-active' : ''; ?>">Settings</a>
+            <a href="?page=gsc-trending&tab=guide" class="nav-tab <?php echo $active_tab === 'guide' ? 'nav-tab-active' : ''; ?>">Usage Guide</a>
+        </h2>
+        <div style="background:#fff; padding:20px; border-radius:8px; margin-top:10px;">
+            <?php
+            if ($active_tab === 'settings') {
+                gsc_settings_tab();
+            } else {
+                gsc_usage_guide_tab();
+            }
+            ?>
+        </div>
     </div>
     <?php
 }
+
+function gsc_settings_tab() {
+    $opts = get_option('gsc_trending_options', gsc_default_options());
+    ?>
+    <form method="post" action="options.php">
+        <?php settings_fields('gsc_trending_options'); ?>
+        <table class="form-table">
+            <tr><th>Google API Client autoload path</th>
+				<td>
+					<input style="width:60%" type="text" 
+						   name="gsc_trending_options[client_path]" 
+						   value="<?php echo esc_attr(str_replace(WP_CONTENT_DIR, '', $opts['client_path'])); ?>" />
+					<p class="description">Path relative to <code>wp-content</code> (e.g. <code>/google-api-php-client/vendor/autoload.php</code>)</p>
+				</td></tr>
+
+				<tr><th>Service account key JSON path</th>
+				<td>
+					<input style="width:60%" type="text" 
+						   name="gsc_trending_options[key_path]" 
+						   value="<?php echo esc_attr(str_replace(WP_CONTENT_DIR, '', $opts['key_path'])); ?>" />
+					<p class="description">Path relative to <code>wp-content</code> (e.g. <code>/uploads/gsc-key.json</code>)</p>
+				</td></tr>
+
+
+            <tr><th>Search Console site URL</th>
+                <td><input style="width:60%" type="text" name="gsc_trending_options[site_url]" value="<?php echo esc_attr($opts['site_url']); ?>" />
+                <p class="description">Must match your Search Console property URL.</p></td></tr>
+
+            <tr><th>Cache (seconds)</th>
+                <td><input type="number" name="gsc_trending_options[cache]" value="<?php echo esc_attr($opts['cache']); ?>" /></td></tr>
+
+            <tr><th>Default days</th>
+                <td><input type="number" name="gsc_trending_options[days]" value="<?php echo esc_attr($opts['days']); ?>" /></td></tr>
+
+            <tr><th>Default limit</th>
+                <td><input type="number" name="gsc_trending_options[limit]" value="<?php echo esc_attr($opts['limit']); ?>" /></td></tr>
+
+            <tr><th>Default metric</th>
+                <td>
+                    <select name="gsc_trending_options[metric]">
+                        <option value="clicks" <?php selected($opts['metric'],'clicks'); ?>>Clicks</option>
+                        <option value="impressions" <?php selected($opts['metric'],'impressions'); ?>>Impressions</option>
+                    </select>
+                </td></tr>
+        </table>
+        <?php submit_button(); ?>
+    </form>
+    <?php
+}
+
+function gsc_usage_guide_tab() { ?>
+    <h2>How to Use GSC Trending Plus</h2>
+    <ol style="line-height:1.8; font-size:15px;">
+       
+		<li> Go to <a href="https://console.cloud.google.com/" target="_blank" rel="nofollow">Google Cloud Console</a></li>
+
+		<li> Create a new project (e.g., “yourdomain GSC API”).</li>
+
+		<li> Navigate to <strong>APIs & Services → Library →</strong> search for “Search Console API” → click <strong>Enable.</strong></li>
+
+		<li> Go to <strong>APIs & Services → Credentials → Create Credentials → Service Account.</strong></li>
+
+		<li> 
+			Name it (e.g., <code>gsc-service</code>) → click <strong>Create and Continue → </strong>assign no special roles → click <strong>Done.</strong>
+		</li>
+		<li> Click your new Service Account <strong> → Keys → Add Key → Create New Key → JSON.</strong></li>
+
+		<li> It will download a file like: <code>gsc-service-xxxxxxxxxxxx.json</code></li>
+
+		<li>
+			<strong>Upload Your Service Account Key</strong> — Upload the JSON key to <code>wp-content/uploads/gsc-key.json</code> and set its path in settings. 
+		</li>
+		<li> 
+			<strong>Grant Access </strong>— Add your service account email to <a href="https://search.google.com/search-console" target="_blank">Search Console → Settings → Users &amp; permissions</a> with Full access. 
+		</li>
+		<li>
+			<strong>Install PHP Google API Client:</strong>
+
+			<pre><code>composer require google/apiclient:^2.15</code></pre>
+		</li>
+		<li>
+			<strong>Use the Shortcode</strong> — Add this to any post or page:
+
+			<pre><code>[gsc_trending_posts limit="6" days="14" metric="clicks"]</code></pre>
+
+		</li>
+    </ol>
+
+    <h3>📊 Example Output</h3>
+    <p>This shortcode displays a list of your top-performing pages from Google Search Console, sorted by Clicks or Impressions.</p>
+
+    <h3>🔧 Optional Attributes</h3>
+    <table class="widefat striped" style="max-width:700px;">
+        <thead>
+            <tr><th>Attribute</th><th>Description</th><th>Example</th></tr>
+        </thead>
+        <tbody>
+            <tr><td><code>limit</code></td><td>Number of posts to show</td><td><code>limit="5"</code></td></tr>
+            <tr><td><code>days</code></td><td>Data range (last N days)</td><td><code>days="30"</code></td></tr>
+            <tr><td><code>metric</code></td><td>Choose “clicks” or “impressions”</td><td><code>metric="impressions"</code></td></tr>
+        </tbody>
+    </table>
+
+    <p style="margin-top:20px;">🎉 <strong>Tip:</strong> You can place this shortcode in your homepage, sidebar, or any widget area to highlight trending content!</p>
+<?php }
+
+
 
 // --- Admin warning if not configured
 add_action('admin_notices', function(){
