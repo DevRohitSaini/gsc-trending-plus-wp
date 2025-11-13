@@ -37,9 +37,6 @@ logs/
 *.bak
 *.tmp
 
-#plugin meta
-readme.txt
-
 # Include these explicitly
 !src/
 !README.md

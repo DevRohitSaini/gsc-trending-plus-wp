@@ -2,8 +2,9 @@
 /*
 Plugin Name: GSC Trending Plus
 Description: Display trending and most visited posts from Google Search Console.
-Version: 1.0
+Version: 1.0.0
 Author: Rohit Saini
+Author URI: https://myexpertise.io/
 License: GPL2
 */
 
